@@ -13,7 +13,8 @@
     "asdf",
     "docker-compose",
     "github-actions",
-    "gomod"
+    "gomod",
+    "npm"
   ],
   "packageRules": [
     {
@@ -79,6 +80,17 @@
       "semanticCommitScope": "deps",
       "addLabels": [
         "go"
+      ]
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "commitMessageTopic": "npm package {{depName}}",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps",
+      "addLabels": [
+        "npm"
       ]
     },
     {
