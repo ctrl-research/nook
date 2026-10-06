@@ -18,5 +18,5 @@ export function inRegion(p: LatLon): boolean {
   return p.lat >= REGION.south && p.lat <= REGION.north && p.lon >= REGION.west && p.lon <= REGION.east;
 }
 
-/** `minLon,minLat,maxLon,maxLat`, as Photon's `bbox` and Nominatim's `viewbox` expect. */
+/** `minLon,minLat,maxLon,maxLat`, as Nominatim's `viewbox` expects. */
 export const REGION_BBOX = [REGION.west, REGION.south, REGION.east, REGION.north].join(",");

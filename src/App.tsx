@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Alternative, Mode, Place, Trip } from "./types";
 import { MODES } from "./types";
 import { inRegion, REGION } from "./config/region";
@@ -113,7 +113,6 @@ export function App() {
     update((s) => ({ ...s, origin: p, choices: {} }));
   };
 
-  const near = useMemo(() => (origin ? { lat: origin.lat, lon: origin.lon } : undefined), [origin]);
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   return (
@@ -126,7 +125,6 @@ export function App() {
 
         <AddressSearch
           placeholder="Enter an address in the GTA"
-          near={near}
           initialValue={origin?.name}
           onSelect={setOrigin}
         />
@@ -170,7 +168,6 @@ export function App() {
           categories={categories}
           pins={pins}
           depart={depart}
-          near={near}
           onCategories={(c) => update((s) => ({ ...s, categories: c }))}
           onPins={(p) => update((s) => ({ ...s, pins: p }))}
           onDepart={(t) => update((s) => ({ ...s, depart: t }))}
@@ -179,7 +176,7 @@ export function App() {
         <footer>
           Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map style by <a href="https://openfreemap.org">OpenFreeMap</a>. Routing by{" "}
           <a href="https://routing.openstreetmap.de/">FOSSGIS OSRM</a>, transit by <a href="https://transitous.org/">Transitous</a>,
-          search by <a href="https://photon.komoot.io/">Photon</a> &amp; <a href="https://nominatim.org/">Nominatim</a>.
+          search by <a href="https://nominatim.org/">Nominatim</a>.
           <br />
           Results are cached in this browser for up to a week.{" "}
           <button

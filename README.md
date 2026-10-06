@@ -25,7 +25,7 @@ npm run dev         # http://localhost:5173
 
 ## How it works
 
-1. **Origin:** search an address (autocomplete via Photon, or press Enter for a Nominatim search). Clicking the map deliberately does *not* move the origin, so a stray click can't shift it. Search and the map are limited to the GTA (`src/config/region.ts`).
+1. **Origin:** type an address and press Enter (or **Search**) to look it up via Nominatim, then pick a match. There's no search-as-you-type: Nominatim's policy forbids it, and the free type-ahead service (Photon) became too slow (20s+). Clicking the map deliberately does *not* move the origin, so a stray click can't shift it. Search and the map are limited to the GTA (`src/config/region.ts`).
 2. **Options per category:** Overpass is queried with every category's tag filters around the origin, widening the radius (1.5 → 5 → 15 → 30 km) only for categories with fewer than 6 matches. Those 6 are ranked by **walking time**, so a park across a highway doesn't win just for being close; the quickest walk is shown by default.
 3. **Choosing another option:** click a category to expand its list and show its other options on the map. Pick one (from the list or the map) to use it instead; the pick is saved in the URL. **Show 6 more** fetches the next batch. "Downtown" is a fixed point (King & Bay) rather than a search.
 4. **Travel times:** car and walk times come from OSRM table requests (one per mode for all destinations). Transit comes from Transitous at the chosen departure time (default: next weekday 08:00), counting from when you leave home, not including the wait before you set out. When walking beats transit, the walk time is shown with 🚶.
@@ -36,8 +36,7 @@ npm run dev         # http://localhost:5173
 | Purpose | Service | Notes |
 | --- | --- | --- |
 | Base map | [OpenFreeMap](https://openfreemap.org/) Liberty (vector, via MapLibre GL) | No key; dashed lines and 3D buildings are hidden for a calmer map |
-| Autocomplete | [Photon](https://photon.komoot.io/) (komoot) | Nominatim forbids autocomplete, so it isn't used for this |
-| Enter-to-search, place-search fallback | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Paced to 1 req/s |
+| Address search (on Enter), place-search fallback | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Paced to 1 req/s |
 | Nearby places | [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Rotates between public instances |
 | Car / walk routing | [FOSSGIS OSRM](https://routing.openstreetmap.de/) | |
 | Public transit | [Transitous](https://transitous.org/) | Coverage depends on the region's published GTFS feeds |

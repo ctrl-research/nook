@@ -1,116 +1,104 @@
-import { useEffect, useId, useRef, useState } from "react";
-import type { LatLon, Place } from "../types";
-import { searchAddress, searchAddressOnce } from "../api/geocode";
+import { useEffect, useId, useState } from "react";
+import type { Place } from "../types";
+import { searchAddress } from "../api/geocode";
 
 interface Props {
   placeholder: string;
-  near?: LatLon;
   onSelect: (place: Place) => void;
   /** Clear the input after a selection (for "add" flows). */
   clearOnSelect?: boolean;
   initialValue?: string;
 }
 
-export function AddressSearch({ placeholder, near, onSelect, clearOnSelect, initialValue = "" }: Props) {
+/**
+ * Search on submit (Enter or the Search button), not as you type: the free
+ * geocoder's policy forbids type-ahead, and submitted searches take ~0.5s.
+ */
+export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialValue = "" }: Props) {
   const [text, setText] = useState(initialValue);
-  const [results, setResults] = useState<Place[]>([]);
+  const [results, setResults] = useState<Place[] | null>(null);
   const [active, setActive] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const dirty = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const listId = useId();
 
   useEffect(() => {
-    if (!dirty.current) setText(initialValue);
-  }, [initialValue]);
+    if (!editing) setText(initialValue);
+  }, [initialValue, editing]);
 
-  useEffect(() => {
-    const q = text.trim();
-    if (!dirty.current || q.length < 3) {
-      setResults([]);
-      return;
-    }
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => {
-      setLoading(true);
-      searchAddress(q, near, ctrl.signal)
-        .then((r) => !ctrl.signal.aborted && show(r))
-        .catch((e) => !ctrl.signal.aborted && setError(e instanceof Error ? e.message : String(e)))
-        .finally(() => !ctrl.signal.aborted && setLoading(false));
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      ctrl.abort();
-      setLoading(false);
-    };
-    // `near` only biases ranking; don't re-query when it changes.
-  }, [text]);
-
-  const show = (r: Place[]) => {
-    setResults(r);
-    setActive(0);
-    setOpen(true);
-    setError(r.length ? null : "No matches");
-  };
-
-  /** Enter with no suggestions: a single explicit lookup via Nominatim. */
   const submit = () => {
     const q = text.trim();
-    if (q.length < 3) return;
+    if (q.length < 3) {
+      setError("Type at least 3 characters");
+      return;
+    }
     setLoading(true);
-    searchAddressOnce(q)
-      .then(show)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+    setError(null);
+    searchAddress(q)
+      .then((r) => {
+        setResults(r);
+        setActive(0);
+        if (!r.length) setError("No matches in the GTA. Try adding the city, e.g. “… Mississauga”");
+      })
+      .catch((e) => setError(`Search unavailable: ${e instanceof Error ? e.message : e}`))
       .finally(() => setLoading(false));
   };
 
   const choose = (p: Place) => {
-    dirty.current = false;
+    setEditing(false);
     setText(clearOnSelect ? "" : p.name);
-    setOpen(false);
-    setResults([]);
+    setResults(null);
+    setError(null);
     onSelect(p);
   };
 
+  const open = !!results?.length;
+
   return (
     <div className="search">
-      <input
-        type="search"
-        value={text}
-        placeholder={placeholder}
-        role="combobox"
-        aria-expanded={open && results.length > 0}
-        aria-controls={listId}
-        onChange={(e) => {
-          dirty.current = true;
-          setText(e.target.value);
-        }}
-        onFocus={() => results.length && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (!open || !results.length)) {
-            e.preventDefault();
-            submit();
-            return;
-          }
-          if (!open || !results.length) return;
-          if (e.key === "ArrowDown") setActive((a) => (a + 1) % results.length);
-          else if (e.key === "ArrowUp") setActive((a) => (a - 1 + results.length) % results.length);
-          else if (e.key === "Enter") choose(results[active]);
-          else if (e.key === "Escape") setOpen(false);
-          else return;
+      <form
+        className="search-row"
+        role="search"
+        onSubmit={(e) => {
           e.preventDefault();
+          if (open && results) choose(results[active]);
+          else submit();
         }}
-      />
-      {loading ? (
-        <div className="search-status">Searching…</div>
+      >
+        <input
+          type="search"
+          value={text}
+          placeholder={placeholder}
+          aria-expanded={open}
+          aria-controls={listId}
+          onChange={(e) => {
+            setEditing(true);
+            setText(e.target.value);
+            setResults(null); // results belong to the previous query
+            setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (!open || !results) return;
+            if (e.key === "ArrowDown") setActive((a) => (a + 1) % results.length);
+            else if (e.key === "ArrowUp") setActive((a) => (a - 1 + results.length) % results.length);
+            else if (e.key === "Escape") setResults(null);
+            else return;
+            e.preventDefault();
+          }}
+        />
+        <button type="submit" className="search-button" disabled={loading}>
+          {loading ? "…" : "Search"}
+        </button>
+      </form>
+      {error ? (
+        <div className="search-error">{error}</div>
       ) : (
-        error && <div className="search-error">{error === "No matches" ? error : `Search unavailable: ${error}`} · press Enter to retry</div>
+        editing && !open && !loading && text.trim().length >= 3 && <div className="search-status">Press Enter to search</div>
       )}
-      {open && results.length > 0 && (
+      {open && (
         <ul className="search-results" id={listId} role="listbox">
-          {results.map((r, i) => (
+          {results!.map((r, i) => (
             <li
               key={`${r.lat},${r.lon},${i}`}
               role="option"

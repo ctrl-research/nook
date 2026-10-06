@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Category, LatLon, Pin } from "../types";
+import type { Category, Pin } from "../types";
 import { PRESET_CATEGORIES } from "../config/categories";
 import { parseTagSpec } from "../lib/tags";
 import { AddressSearch } from "./AddressSearch";
@@ -8,7 +8,6 @@ interface Props {
   categories: Category[];
   pins: Pin[];
   depart: string;
-  near?: LatLon;
   onCategories: (c: Category[]) => void;
   onPins: (p: Pin[]) => void;
   onDepart: (d: string) => void;
@@ -20,7 +19,7 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "custom";
 
-export function Settings({ categories, pins, depart, near, onCategories, onPins, onDepart }: Props) {
+export function Settings({ categories, pins, depart, onCategories, onPins, onDepart }: Props) {
   const active = new Set(categories.map((c) => c.id));
   const available = PRESET_CATEGORIES.filter((c) => !active.has(c.id));
 
@@ -128,7 +127,6 @@ export function Settings({ categories, pins, depart, near, onCategories, onPins,
         </div>
         <AddressSearch
           placeholder="Search an address to pin…"
-          near={near}
           clearOnSelect
           onSelect={(place) => {
             onPins([...pins, { id: `${Date.now()}`, label: pinLabel.trim() || place.name, place }]);
