@@ -1,67 +1,52 @@
-import type { LatLon, Place } from "../types";
+import type { Place } from "../types";
 import { fetchJson, Pacer } from "./http";
 import { DAY } from "./persistentCache";
 import { REGION_BBOX } from "../config/region";
 
-// Photon allows type-ahead use; Nominatim's policy forbids autocomplete, so it is
-// only used for explicitly submitted searches (max 1 req/s).
-const PHOTON = "https://photon.komoot.io/api/";
+/**
+ * Address search via Nominatim, run only when the user submits (Enter / Search):
+ * its usage policy forbids search-as-you-type, and the public type-ahead
+ * alternative (Photon) became too slow (20s+) to be usable. Max 1 req/s.
+ */
 const NOMINATIM = "https://nominatim.openstreetmap.org";
 export const nominatimPacer = new Pacer(1100);
 
-interface PhotonFeature {
-  geometry: { coordinates: [number, number] };
-  properties: Record<string, string | undefined>;
-}
-
-function photonToPlace(f: PhotonFeature): Place {
-  const p = f.properties;
-  const street = [p.housenumber, p.street].filter(Boolean).join(" ");
-  const primary = p.name ?? (street || p.city || "Unnamed place");
-  const detail = [p.name ? street : "", p.city ?? p.county, p.state, p.country]
-    .filter((s) => s && s !== primary)
-    .join(", ");
-  const [lon, lat] = f.geometry.coordinates;
-  return { lat, lon, name: primary, detail };
-}
-
-/** Address / place autocomplete within the GTA, biased towards `near` when given. */
-export async function searchAddress(query: string, near?: LatLon, signal?: AbortSignal): Promise<Place[]> {
-  const params = new URLSearchParams({ q: query, limit: "6", bbox: REGION_BBOX });
-  if (near) {
-    params.set("lat", near.lat.toFixed(5));
-    params.set("lon", near.lon.toFixed(5));
-  }
-  // Uncached so a newer keystroke really cancels the previous (slow) request.
-  const data = await fetchJson<{ features: PhotonFeature[] }>(`${PHOTON}?${params}`, {
-    signal,
-    timeoutMs: 15_000,
-    cache: false,
-  });
-  // OSM often has several ways with the same name (e.g. segments of one path).
-  const seen = new Set<string>();
-  return data.features.map(photonToPlace).filter((p) => {
-    const key = `${p.name}|${p.detail}`;
-    return !seen.has(key) && seen.add(key);
-  });
-}
-
-interface NominatimSearch {
+export interface NominatimSearchResult {
   lat: string;
   lon: string;
   name?: string;
   display_name: string;
+  address?: Record<string, string>;
 }
 
-/** One-off search for an explicitly submitted query (Enter), when autocomplete isn't helping. */
-export async function searchAddressOnce(query: string): Promise<Place[]> {
-  const params = new URLSearchParams({ q: query, format: "jsonv2", limit: "6", viewbox: REGION_BBOX, bounded: "1" });
-  const r = await fetchJson<NominatimSearch[]>(`${NOMINATIM}/search?${params}`, {
+/** "Toronto City Hall" over "100 Queen Street West, Toronto", or "100 Queen Street West" over "Toronto". */
+export function toPlace(r: NominatimSearchResult): Place {
+  const a = r.address ?? {};
+  const street = [a.house_number, a.road].filter(Boolean).join(" ");
+  const locality = a.city ?? a.town ?? a.village ?? a.municipality ?? a.suburb;
+  const name = r.name || street || r.display_name.split(",")[0].trim();
+  const detail = [r.name ? street : "", locality].filter(Boolean).join(", ");
+  return { lat: Number(r.lat), lon: Number(r.lon), name, detail: detail || undefined };
+}
+
+/** Address / place search within the GTA. */
+export async function searchAddress(query: string): Promise<Place[]> {
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "8",
+    viewbox: REGION_BBOX,
+    bounded: "1",
+  });
+  const results = await fetchJson<NominatimSearchResult[]>(`${NOMINATIM}/search?${params}`, {
     pacer: nominatimPacer,
     persistMs: 30 * DAY,
   });
-  return r.map((x) => {
-    const parts = x.display_name.split(",").map((s) => s.trim());
-    return { lat: Number(x.lat), lon: Number(x.lon), name: x.name || parts[0], detail: parts.slice(1, 4).join(", ") };
+  // OSM often has several objects for one spot (e.g. a building and its address).
+  const seen = new Set<string>();
+  return results.map(toPlace).filter((p) => {
+    const key = `${p.name}|${p.detail}`;
+    return !seen.has(key) && seen.add(key);
   });
 }

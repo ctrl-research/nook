@@ -26,7 +26,7 @@ npm run build      # typecheck + vite build → dist/
 ## Working on the app
 
 - Keep it stateless and key-free: no backend. App settings live only in the URL hash (`encodeState`/`decodeState`, with a test). The only browser storage is the response cache in `src/api/persistentCache.ts`, opted into per request via `fetchJson`'s `persistMs` (use `accept` so error bodies are never stored).
-- Respect public service usage policies: Nominatim requests go through `nominatimPacer` (1 req/s) and must never be used for autocomplete (use Photon). New paced calls should pass the caller's `AbortSignal` so abandoned lookups don't hold up the queue.
+- Respect public service usage policies: Nominatim requests go through `nominatimPacer` (1 req/s) and must never be used for search-as-you-type (address search only runs on submit). New paced calls should pass the caller's `AbortSignal` so abandoned lookups don't hold up the queue.
 - Each external service has one module in `src/api/`; keep provider-specific parsing there so providers can be swapped.
 - Results are incremental (`src/lib/useDestinations.ts`): each pin/category row is looked up once and only redone when its own inputs change. Only a new origin or departure time recomputes everything. Don't reintroduce whole-table recomputes on pin/category edits.
 - Pure logic (`src/lib/`, parsing helpers in `src/api/`) gets unit tests; don't write tests that hit the network.
