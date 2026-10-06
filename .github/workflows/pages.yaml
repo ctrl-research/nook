@@ -40,6 +40,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Optional browser key for address suggestions (Settings → Secrets and
+          # variables → Actions → Variables). It ships in the page by design, so it
+          # is a variable, not a secret; restrict it to the site's origin in Geoapify.
+          VITE_GEOAPIFY_KEY: ${{ vars.VITE_GEOAPIFY_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

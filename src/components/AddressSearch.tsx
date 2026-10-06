@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import type { Place } from "../types";
 import { searchAddress } from "../api/geocode";
+import { autocompleteEnabled, suggestAddresses } from "../api/autocomplete";
 
 interface Props {
   placeholder: string;
@@ -11,8 +12,9 @@ interface Props {
 }
 
 /**
- * Search on submit (Enter or the Search button), not as you type: the free
- * geocoder's policy forbids type-ahead, and submitted searches take ~0.5s.
+ * Suggestions while typing come from Geoapify when a key is configured; the
+ * Search button (or Enter with no suggestion list open) runs a Nominatim
+ * search. Without Geoapify the box is simply submit-to-search.
  */
 export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialValue = "" }: Props) {
   const [text, setText] = useState(initialValue);
@@ -26,6 +28,28 @@ export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialVal
   useEffect(() => {
     if (!editing) setText(initialValue);
   }, [initialValue, editing]);
+
+  // Suggestions while typing (no-op when autocomplete is off).
+  useEffect(() => {
+    const q = text.trim();
+    if (!editing || q.length < 3 || !autocompleteEnabled()) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      suggestAddresses(q, ctrl.signal)
+        .then((r) => {
+          if (ctrl.signal.aborted) return;
+          setResults(r.length ? r : null);
+          setActive(0);
+        })
+        .catch(() => {
+          // A failed suggestion isn't worth an error; Search still works.
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [text, editing]);
 
   const submit = () => {
     const q = text.trim();
@@ -54,6 +78,7 @@ export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialVal
   };
 
   const open = !!results?.length;
+  const hint = autocompleteEnabled() ? "Pick a suggestion, or press Search" : "Press Enter to search";
 
   return (
     <div className="search">
@@ -62,7 +87,9 @@ export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialVal
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
-          if (open && results) choose(results[active]);
+          // The button always searches; Enter picks the highlighted suggestion if there is one.
+          const viaButton = (e.nativeEvent as SubmitEvent).submitter instanceof HTMLButtonElement;
+          if (!viaButton && open && results) choose(results[active]);
           else submit();
         }}
       >
@@ -75,9 +102,11 @@ export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialVal
           onChange={(e) => {
             setEditing(true);
             setText(e.target.value);
-            setResults(null); // results belong to the previous query
             setError(null);
+            // Keep suggestions on screen until fresher ones arrive; search results belong to the old text.
+            if (!autocompleteEnabled() || e.target.value.trim().length < 3) setResults(null);
           }}
+          onBlur={() => setTimeout(() => setResults(null), 150)}
           onKeyDown={(e) => {
             if (!open || !results) return;
             if (e.key === "ArrowDown") setActive((a) => (a + 1) % results.length);
@@ -94,7 +123,7 @@ export function AddressSearch({ placeholder, onSelect, clearOnSelect, initialVal
       {error ? (
         <div className="search-error">{error}</div>
       ) : (
-        editing && !open && !loading && text.trim().length >= 3 && <div className="search-status">Press Enter to search</div>
+        editing && !open && !loading && text.trim().length >= 3 && <div className="search-status">{hint}</div>
       )}
       {open && (
         <ul className="search-results" id={listId} role="listbox">
