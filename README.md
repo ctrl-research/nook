@@ -22,6 +22,7 @@ npm run dev         # http://localhost:5173
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Type check + production build to `dist/` |
 | `npm run preview` | Serve the production build locally |
+| `npm run update:schools` | Rebuild `public/data/schools-gta.json` from Ontario open data |
 
 ### Address suggestions (optional)
 
@@ -50,6 +51,7 @@ Suggestions while typing need a free [Geoapify](https://www.geoapify.com/) API k
 | Nearby places | [Nominatim](https://nominatim.org/) `[key=value]` search | Overpass was dropped: its public servers took 10–25s or timed out |
 | Walk / car times and routes | [FOSSGIS Valhalla](https://valhalla.openstreetmap.de/) | ~0.35s per request; fair use 1 req/s per user. FOSSGIS's OSRM was dropped: it delayed every request after the first by ~10s |
 | Public transit | [Transitous](https://transitous.org/) | Coverage depends on the region's published GTFS feeds |
+| Schools and EQAO results | [Ontario open data](https://data.ontario.ca/dataset/school-information-and-student-demographics) (Ministry of Education) | Bundled as `public/data/schools-gta.json`; Open Government Licence – Ontario |
 
 ### Reliability
 
@@ -61,6 +63,18 @@ These are community-run servers with no uptime guarantee. The app degrades rathe
 - Responses are cached in the browser (Cache Storage) so reloading or revisiting a setup doesn't re-query everything: places and walk/car times for 7 days, address lookups for 30 days, transit for 12 hours. Errors are never stored, expired entries are pruned on load, and the footer has a **Clear cached data** link. This is a per-browser cache of public data, not app state: the setup itself still lives only in the URL.
 
 This is fine for personal or small-team use. Heavy traffic would need self-hosted services (Docker images exist for all of them) or a paid provider.
+
+## Schools
+
+The **School** category uses the Ministry of Education's open dataset rather than OpenStreetMap: every publicly funded GTA school (about 2,300; private schools aren't included) with its level, board, website and EQAO results.
+
+- Expanding School shows an **All / Elementary / Secondary** filter (saved in the URL as `sl`). Each option shows its headline results: Grade 6 reading and math for elementary schools, Grade 9 math and Grade 10 literacy for secondary schools.
+- The selected school shows all its results next to the average across Ontario schools, marked ▲/▼ when more than 3 points above or below.
+- Results are shown as published, as the % of students meeting the provincial standard. Nook doesn't turn them into a rating or rank, which EQAO advises against. Results are withheld for very small cohorts and shown as "not reported".
+
+The data is a ~110 KB (gzipped) file loaded only when the School category is used. `npm run update:schools` rebuilds it from the latest published spreadsheet. `.github/workflows/update-schools.yaml` does the same monthly and opens a PR when it changes; this needs "Allow GitHub Actions to create and approve pull requests" enabled in the repo/org settings.
+
+Contains information licensed under the [Open Government Licence – Ontario](https://www.ontario.ca/page/open-government-licence-ontario).
 
 ## Custom categories
 

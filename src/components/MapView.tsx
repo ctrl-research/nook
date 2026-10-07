@@ -7,6 +7,7 @@ import { MapContainer, Marker, Polyline, Tooltip, useMap, useMapEvents } from "r
 import type { Alternative, Destination, LatLon, Place, Trip } from "../types";
 import { REGION } from "../config/region";
 import { formatDuration } from "../lib/geo";
+import { schoolSummary } from "../lib/schools";
 import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -166,6 +167,12 @@ export function MapView({ origin, rows, selectedKey, expandedKey, route, onSelec
           >
             <Tooltip direction="top" offset={[0, -14]}>
               {r.label}: {r.place!.name}
+              {r.place!.school && (
+                <>
+                  <br />
+                  {schoolSummary(r.place!.school)}
+                </>
+              )}
             </Tooltip>
           </Marker>
         );
@@ -182,6 +189,12 @@ export function MapView({ origin, rows, selectedKey, expandedKey, route, onSelec
             <Tooltip direction="top" offset={[0, -12]}>
               {a.rank}. {a.name}
               {a.walk?.status === "ok" && ` · 🚶 ${formatDuration(a.walk.trip.seconds)}`}
+              {a.school && (
+                <>
+                  <br />
+                  {schoolSummary(a.school)}
+                </>
+              )}
               <br />
               <em>Click to use this one</em>
             </Tooltip>

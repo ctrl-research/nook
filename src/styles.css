@@ -530,6 +530,106 @@ details summary {
   text-align: center;
 }
 
+.alternatives li button {
+  flex-wrap: wrap;
+}
+
+.alt-sub {
+  flex-basis: 100%;
+  padding-left: 1.45rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: normal;
+}
+
+.level-filter {
+  display: inline-flex;
+  margin: 0 0 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.level-filter button {
+  padding: 0.2rem 0.7rem;
+  border: 0;
+  background: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.level-filter button.on {
+  background: var(--accent);
+  color: white;
+}
+
+.school-details {
+  margin: 0.15rem 0 0.4rem 1.95rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.78rem;
+}
+
+.school-details p {
+  margin: 0 0 0.4rem;
+}
+
+.school-details p:last-child {
+  margin-bottom: 0;
+}
+
+.school-meta {
+  color: var(--muted);
+}
+
+.school-scores {
+  width: 100%;
+  margin-bottom: 0.4rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.school-scores caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding-bottom: 0.2rem;
+}
+
+.school-scores th,
+.school-scores td {
+  padding: 0.12rem 0.25rem;
+  text-align: right;
+  font-weight: normal;
+}
+
+.school-scores th[scope="row"] {
+  text-align: left;
+}
+
+.school-scores thead th {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.school-scores .score {
+  font-weight: 600;
+}
+
+.school-scores .score.above {
+  color: var(--near-fg);
+}
+
+.school-scores .score.below {
+  color: var(--far-fg);
+}
+
+.school-scores .avg {
+  color: var(--muted);
+}
+
 .alt-name {
   overflow: hidden;
   text-overflow: ellipsis;

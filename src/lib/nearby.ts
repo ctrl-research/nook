@@ -1,5 +1,6 @@
 import type { Alternative, Category, Destination, LatLon, Mode, Pin, Place, TripResult } from "../types";
-import { findPlaces, PAGE_SIZE } from "../api/places";
+import { findPlaces, PAGE_SIZE, type CandidateResult } from "../api/places";
+import { findSchools, schoolAt } from "../api/schools";
 import { streetTable, type StreetMode } from "../api/routing";
 import { transitTrip } from "../api/transit";
 
@@ -17,13 +18,23 @@ export function rankByWalk(options: Alternative[]): Alternative[] {
   return [...options].sort((a, b) => secs(a) - secs(b) || a.distanceM - b.distanceM);
 }
 
+/** Options for a category: from a bundled dataset if it has one, else the place search. */
+function findOptions(
+  origin: LatLon,
+  category: Category,
+  opts: { min?: number; max?: number; signal?: AbortSignal },
+): Promise<CandidateResult> {
+  if (category.dataset === "schools") return findSchools(origin, category.schoolLevel, opts.max ?? PAGE_SIZE);
+  return findPlaces(origin, category, opts);
+}
+
 /**
  * The next `PAGE_SIZE` options for a category beyond those already shown, with
  * walk times, shortest walk first. Returns [] when nothing else is in range.
  */
 export async function moreAlternatives(origin: LatLon, category: Category, existing: Alternative[]): Promise<Alternative[]> {
   const want = existing.length + PAGE_SIZE;
-  const found = await findPlaces(origin, category, { min: want, max: want });
+  const found = await findOptions(origin, category, { min: want, max: want });
   if (!found.ok) return [];
   const fresh = found.candidates.filter((c) => !existing.some((e) => samePlace(e, c)));
   const walks = await streetTable("walk", origin, fresh);
@@ -57,7 +68,7 @@ export const categoryKey = (c: Category) => `cat:${c.id}`;
 export function placeholderRow(item: { pin: Pin } | { category: Category }): Destination {
   if ("pin" in item) return { key: pinKey(item.pin), label: item.pin.label, icon: "📌", place: item.pin.place, trips: {} };
   const c = item.category;
-  return { key: categoryKey(c), label: c.label, icon: c.icon, place: c.fixed ?? null, trips: {} };
+  return { key: categoryKey(c), label: c.label, icon: c.icon, place: c.fixed ?? null, trips: {}, dataset: c.dataset };
 }
 
 /**
@@ -102,7 +113,7 @@ export async function resolveDestinations(
   const resolveCategory = async (c: Category) => {
     const key = categoryKey(c);
     const choice = choices[c.id];
-    const found = await findPlaces(origin, c, { signal });
+    const found = await findOptions(origin, c, { signal });
     if (signal.aborted) return;
     if (!found.ok && !choice) {
       patch(key, (d) => ({ ...d, error: found.reason }));
@@ -113,7 +124,9 @@ export async function resolveDestinations(
     if (signal.aborted) return;
     const alternatives = rankByWalk(candidates.map((cand, i) => ({ ...cand, walk: walks[i] })));
     const match = choice ? alternatives.find((a) => samePlace(a, choice)) : alternatives[0];
-    const picked: Place = match ?? choice;
+    // A saved pick beyond the first page only has lat/lon/name; restore its school details.
+    const restored = !match && choice && c.dataset === "schools" ? await schoolAt(choice, origin) : undefined;
+    const picked: Place = match ?? restored ?? choice;
     const walk = match?.walk;
     // Whether more exist is only known after asking; "show more" turns this off if not.
     patch(key, (d) => ({ ...d, place: picked, alternatives, moreAvailable: true, chosen: !!choice, trips: walk ? { walk } : {} }));

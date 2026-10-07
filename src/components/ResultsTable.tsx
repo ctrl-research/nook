@@ -1,5 +1,7 @@
 import { Fragment } from "react";
-import type { Alternative, Destination, Mode, TripResult } from "../types";
+import type { Alternative, Destination, Mode, SchoolLevel, TripResult } from "../types";
+import { schoolSummary } from "../lib/schools";
+import { SchoolDetails, SchoolLevelFilter } from "./SchoolDetails";
 import { MODES } from "../types";
 import { formatDistance, formatDuration, haversine } from "../lib/geo";
 import { PAGE_SIZE } from "../api/places";
@@ -49,6 +51,8 @@ interface Props {
   onChoose: (key: string, alt: Alternative | null) => void;
   onLoadMore: (key: string) => void;
   loadingMoreKey: string | null;
+  schoolLevel: SchoolLevel | null;
+  onSchoolLevel: (level: SchoolLevel | null) => void;
 }
 
 interface AlternativesProps {
@@ -56,12 +60,15 @@ interface AlternativesProps {
   loading: boolean;
   onChoose: Props["onChoose"];
   onLoadMore: Props["onLoadMore"];
+  schoolLevel: Props["schoolLevel"];
+  onSchoolLevel: Props["onSchoolLevel"];
 }
 
-function Alternatives({ row, loading, onChoose, onLoadMore }: AlternativesProps) {
+function Alternatives({ row, loading, onChoose, onLoadMore, schoolLevel, onSchoolLevel }: AlternativesProps) {
   const alts = row.alternatives ?? [];
   return (
     <div className="alternatives">
+      {row.dataset === "schools" && <SchoolLevelFilter value={schoolLevel} onChange={onSchoolLevel} />}
       <ul>
         {alts.map((a, i) => {
           const current = row.place?.lat === a.lat && row.place?.lon === a.lon;
@@ -77,7 +84,9 @@ function Alternatives({ row, loading, onChoose, onLoadMore }: AlternativesProps)
                   {formatDistance(a.distanceM)}
                   {a.walk?.status === "ok" && <> · 🚶 {formatDuration(a.walk.trip.seconds)}</>}
                 </span>
+                {a.school && <span className="alt-sub">{schoolSummary(a.school)}</span>}
               </button>
+              {current && a.school && <SchoolDetails info={a.school} />}
             </li>
           );
         })}
@@ -110,6 +119,8 @@ export function ResultsTable({
   onChoose,
   onLoadMore,
   loadingMoreKey,
+  schoolLevel,
+  onSchoolLevel,
 }: Props) {
   return (
     <>
@@ -182,6 +193,8 @@ export function ResultsTable({
                     loading={loadingMoreKey === r.key}
                     onChoose={onChoose}
                     onLoadMore={onLoadMore}
+                    schoolLevel={schoolLevel}
+                    onSchoolLevel={onSchoolLevel}
                   />
                 </td>
               </tr>

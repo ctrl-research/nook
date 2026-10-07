@@ -14,7 +14,8 @@ export const PRESET_CATEGORIES: Category[] = [
     // public_transport=station mostly duplicates railway=station, so it's left out.
     tags: ["highway=bus_stop", "railway=station|halt|tram_stop"],
   },
-  { id: "school", label: "School", icon: "🏫", tags: ["amenity=school"] },
+  // Publicly funded schools with EQAO results, from Ontario open data (see src/api/schools.ts).
+  { id: "school", label: "School", icon: "🏫", tags: ["amenity=school"], dataset: "schools" },
   { id: "groceries", label: "Groceries", icon: "🛒", tags: ["shop=supermarket|greengrocer"] },
   { id: "pharmacy", label: "Pharmacy", icon: "💊", tags: ["amenity=pharmacy"] },
   { id: "cafe", label: "Café", icon: "☕", tags: ["amenity=cafe"] },

@@ -1,4 +1,4 @@
-import type { Category, Pin, Place } from "../types";
+import type { Category, Pin, Place, SchoolLevel } from "../types";
 import type { Choices } from "./nearby";
 import { DEFAULT_CATEGORY_IDS, presetById } from "../config/categories";
 
@@ -7,7 +7,7 @@ import { DEFAULT_CATEGORY_IDS, presetById } from "../config/categories";
  * a bookmark restores a setup and a link shares it.
  *
  *   o=lat,lon  on=origin name  c=ids in order  cx=custom categories (JSON)
- *   p=pins (JSON)  ch=per-category picks (JSON)
+ *   p=pins (JSON)  ch=per-category picks (JSON)  sl=school level (e|s, omitted = both)
  *   t=departure (local "YYYY-MM-DDTHH:mm", omitted = next weekday 8am)
  */
 export interface AppState {
@@ -17,6 +17,8 @@ export interface AppState {
   /** Category id → place picked instead of the default nearest. */
   choices: Choices;
   depart: string | null;
+  /** Only show this school level (both when null). */
+  schoolLevel: SchoolLevel | null;
 }
 
 type CustomTuple = [id: string, label: string, icon: string, tags: string[]];
@@ -65,7 +67,10 @@ export function decodeState(hash: string): AppState {
     }
   }
 
-  return { origin, categories, pins, choices, depart: q.get("t") };
+  const sl = q.get("sl");
+  const schoolLevel: SchoolLevel | null = sl === "e" ? "elementary" : sl === "s" ? "secondary" : null;
+
+  return { origin, categories, pins, choices, depart: q.get("t"), schoolLevel };
 }
 
 export function encodeState(s: AppState): string {
@@ -86,6 +91,7 @@ export function encodeState(s: AppState): string {
     q.set("ch", JSON.stringify(Object.fromEntries(picks.map(([id, p]) => [id, [round(p.lat), round(p.lon), p.name]]))));
   }
   if (s.depart) q.set("t", s.depart);
+  if (s.schoolLevel) q.set("sl", s.schoolLevel[0]);
   return q.toString();
 }
 

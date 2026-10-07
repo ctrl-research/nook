@@ -6,7 +6,14 @@ import { categoryKey, pinKey, placeholderRow, resolveDestinations, type Choices,
 const signature = (item: { pin: Pin } | { category: Category }) =>
   "pin" in item
     ? JSON.stringify([item.pin.label, item.pin.place.lat, item.pin.place.lon])
-    : JSON.stringify([item.category.label, item.category.icon, item.category.tags, item.category.fixed]);
+    : JSON.stringify([
+        item.category.label,
+        item.category.icon,
+        item.category.tags,
+        item.category.fixed,
+        item.category.dataset,
+        item.category.schoolLevel,
+      ]);
 
 /**
  * Compares what is being tracked (key → signature) with what is wanted now:
