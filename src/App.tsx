@@ -8,6 +8,7 @@ import { ResultsTable, type Selection } from "./components/ResultsTable";
 import { Settings } from "./components/Settings";
 import { streetRoute } from "./api/routing";
 import { clearResponseCache } from "./api/http";
+import { autocompleteEnabled } from "./api/autocomplete";
 import { moreAlternatives, tripsFor } from "./lib/nearby";
 import { useDestinations } from "./lib/useDestinations";
 import { decodeState, defaultDeparture, encodeState, toLocalInput, type AppState } from "./lib/urlState";
@@ -176,7 +177,13 @@ export function App() {
         <footer>
           Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map style by <a href="https://openfreemap.org">OpenFreeMap</a>. Routing by{" "}
           <a href="https://routing.openstreetmap.de/">FOSSGIS OSRM</a>, transit by <a href="https://transitous.org/">Transitous</a>,
-          search by <a href="https://nominatim.org/">Nominatim</a>.
+          search by <a href="https://nominatim.org/">Nominatim</a>
+          {autocompleteEnabled() && (
+            <>
+              , address suggestions powered by <a href="https://www.geoapify.com/">Geoapify</a>
+            </>
+          )}
+          .
           <br />
           Results are cached in this browser for up to a week.{" "}
           <button
