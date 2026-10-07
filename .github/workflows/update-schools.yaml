@@ -1,0 +1,49 @@
+name: Update school data
+
+# Rebuilds public/data/schools-gta.json from Ontario's open school dataset and
+# opens a PR when it changes. The Ministry republishes monthly; EQAO results
+# change about once a year.
+on:
+  schedule:
+    - cron: "0 9 3 * *" # 09:00 UTC on the 3rd of each month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # setup-node can't parse .tool-versions' comment header; read it directly.
+      - name: Read Node version from .tool-versions
+        id: tools
+        run: echo "node=$(awk '$1 == "nodejs" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tools.outputs.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild school data
+        run: npm run update:schools
+
+      - name: Open a PR if it changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-school-data
+          commit-message: "chore(data): update GTA school data"
+          title: "chore(data): update GTA school data"
+          body: |
+            Automated refresh of `public/data/schools-gta.json` from Ontario's
+            [School information and student demographics](https://data.ontario.ca/dataset/school-information-and-student-demographics)
+            dataset (Open Government Licence – Ontario).
+          labels: patch

@@ -25,6 +25,7 @@ describe("url state", () => {
     s.pins = [{ id: "0", label: "Office", place: { lat: 43.65, lon: -79.38, name: "1 King St" } }];
     s.depart = "2026-10-06T08:00";
     s.choices = { "x-climbing": { lat: 43.66, lon: -79.4, name: "Boulderz" } };
+    s.schoolLevel = "secondary";
 
     const back = decodeState(`#${encodeState(s)}`);
     expect(back.origin).toEqual({ lat: 43.64257, lon: -79.38709, name: "CN Tower" });
@@ -32,6 +33,7 @@ describe("url state", () => {
     expect(back.pins).toEqual(s.pins);
     expect(back.depart).toBe("2026-10-06T08:00");
     expect(back.choices).toEqual(s.choices);
+    expect(back.schoolLevel).toBe("secondary");
   });
 
   it("ignores garbage instead of throwing", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Alternative, Mode, Place, Trip } from "./types";
 import { MODES } from "./types";
 import { inRegion, REGION } from "./config/region";
@@ -32,7 +32,13 @@ function useHashState(): [AppState, (fn: (s: AppState) => AppState) => void] {
 
 export function App() {
   const [state, update] = useHashState();
-  const { origin, categories, pins, choices } = state;
+  const { origin, pins, choices, schoolLevel } = state;
+  // The school level filter applies to dataset-backed school categories; changing
+  // it only redoes those rows (it's part of their signature).
+  const categories = useMemo(
+    () => state.categories.map((c) => (c.dataset === "schools" ? { ...c, schoolLevel: schoolLevel ?? undefined } : c)),
+    [state.categories, schoolLevel],
+  );
   const depart = state.depart ?? toLocalInput(defaultDeparture());
 
   const { rows, busy, patchRow } = useDestinations(origin, categories, pins, choices, depart);
@@ -159,6 +165,15 @@ export function App() {
               onChoose={choose}
               onLoadMore={loadMore}
               loadingMoreKey={loadingMore}
+              schoolLevel={schoolLevel}
+              onSchoolLevel={(level) =>
+                // A pick made under another filter may not fit the new one, so drop it.
+                update((s) => {
+                  const schoolIds = new Set(s.categories.filter((c) => c.dataset === "schools").map((c) => c.id));
+                  const choices = Object.fromEntries(Object.entries(s.choices).filter(([id]) => !schoolIds.has(id)));
+                  return { ...s, schoolLevel: level, choices };
+                })
+              }
             />
           </>
         ) : (
@@ -166,7 +181,7 @@ export function App() {
         )}
 
         <Settings
-          categories={categories}
+          categories={state.categories}
           pins={pins}
           depart={depart}
           onCategories={(c) => update((s) => ({ ...s, categories: c }))}
@@ -176,7 +191,7 @@ export function App() {
 
         <footer>
           Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map style by <a href="https://openfreemap.org">OpenFreeMap</a>. Routing by{" "}
-          <a href="https://routing.openstreetmap.de/">FOSSGIS OSRM</a>, transit by <a href="https://transitous.org/">Transitous</a>,
+          <a href="https://valhalla.openstreetmap.de/">FOSSGIS Valhalla</a>, transit by <a href="https://transitous.org/">Transitous</a>,
           search by <a href="https://nominatim.org/">Nominatim</a>
           {autocompleteEnabled() && (
             <>
@@ -184,6 +199,11 @@ export function App() {
             </>
           )}
           .
+          <br />
+          School data: Ontario Ministry of Education.{" "}
+          <a href="https://www.ontario.ca/page/open-government-licence-ontario">
+            Contains information licensed under the Open Government Licence – Ontario.
+          </a>
           <br />
           Results are cached in this browser for up to a week.{" "}
           <button

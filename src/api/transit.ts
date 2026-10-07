@@ -1,6 +1,6 @@
 import type { LatLon, Trip, TripResult } from "../types";
 import { decodePolyline } from "../lib/geo";
-import { fetchJson } from "./http";
+import { fetchJson, Limiter } from "./http";
 import { HOUR } from "./persistentCache";
 
 /** Transitous: free, community-run MOTIS instance aggregating public GTFS feeds. */
@@ -67,7 +67,14 @@ export function toTrip(it: MotisItinerary): Trip {
   };
 }
 
-export async function transitTrip(origin: LatLon, dest: LatLon, departAt: Date): Promise<TripResult> {
+/** Transit is the slowest service; keep a couple of requests in flight app-wide. */
+const limiter = new Limiter(2);
+
+export function transitTrip(origin: LatLon, dest: LatLon, departAt: Date): Promise<TripResult> {
+  return limiter.run(() => planTrip(origin, dest, departAt));
+}
+
+async function planTrip(origin: LatLon, dest: LatLon, departAt: Date): Promise<TripResult> {
   const params = new URLSearchParams({
     fromPlace: `${origin.lat},${origin.lon}`,
     toPlace: `${dest.lat},${dest.lon}`,
