@@ -1,5 +1,6 @@
 /**
- * Category tag specs: `key=value`, `key=v1|v2` (any of), or bare `key` (any value).
+ * Category tag specs: `key=value` or `key=v1|v2` (any of). A bare `key` parses,
+ * but can't be searched (the place search needs a value), so the editor rejects it.
  */
 export interface TagSpec {
   key: string;
@@ -18,18 +19,7 @@ export function parseTagSpec(spec: string): TagSpec | null {
   return { key: m[1], values: values?.length ? values : null };
 }
 
-const quote = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** Overpass QL filter, e.g. `["shop"~"^(supermarket|greengrocer)$"]`. */
-export function toOverpassFilter(t: TagSpec): string {
-  if (!t.values) return `[${quote(t.key)}]`;
-  if (t.values.length === 1) return `[${quote(t.key)}=${quote(t.values[0])}]`;
-  return `[${quote(t.key)}~${quote(`^(${t.values.map(escapeRegex).join("|")})$`)}]`;
-}
-
-export function matchesTags(t: TagSpec, tags: Record<string, string> | undefined): boolean {
-  const v = tags?.[t.key];
-  if (v === undefined) return false;
-  return t.values === null || t.values.includes(v);
+/** True when the spec can be searched: it has at least one value. */
+export function isSearchable(spec: string): boolean {
+  return !!parseTagSpec(spec)?.values;
 }

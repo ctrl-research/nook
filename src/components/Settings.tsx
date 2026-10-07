@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Category, Pin } from "../types";
 import { PRESET_CATEGORIES } from "../config/categories";
-import { parseTagSpec } from "../lib/tags";
+import { isSearchable } from "../lib/tags";
 import { AddressSearch } from "./AddressSearch";
 
 interface Props {
@@ -27,7 +27,7 @@ export function Settings({ categories, pins, depart, onCategories, onPins, onDep
   const [icon, setIcon] = useState("📍");
   const [tags, setTags] = useState("");
   const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
-  const invalid = tagList.filter((t) => !parseTagSpec(t));
+  const invalid = tagList.filter((t) => !isSearchable(t));
   const canAdd = label.trim() && tagList.length > 0 && invalid.length === 0;
 
   const [pinLabel, setPinLabel] = useState("");
@@ -94,9 +94,9 @@ export function Settings({ categories, pins, depart, onCategories, onPins, onDep
               onChange={(e) => setTags(e.target.value)}
               placeholder="OSM tags, e.g. sport=climbing, leisure=sports_centre"
             />
-            {invalid.length > 0 && <p className="hint error">Not a valid tag: {invalid.join(", ")}</p>}
+            {invalid.length > 0 && <p className="hint error">Needs key=value: {invalid.join(", ")}</p>}
             <p className="hint">
-              Comma-separated; any match counts. Use <code>key=value</code>, <code>key=a|b</code> or <code>key</code>. Browse
+              Comma-separated; any match counts. Use <code>key=value</code> or <code>key=a|b</code>. Browse
               tags on the{" "}
               <a href="https://wiki.openstreetmap.org/wiki/Map_features" target="_blank" rel="noreferrer">
                 OSM wiki

@@ -176,7 +176,7 @@ export function App() {
 
         <footer>
           Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map style by <a href="https://openfreemap.org">OpenFreeMap</a>. Routing by{" "}
-          <a href="https://routing.openstreetmap.de/">FOSSGIS OSRM</a>, transit by <a href="https://transitous.org/">Transitous</a>,
+          <a href="https://valhalla.openstreetmap.de/">FOSSGIS Valhalla</a>, transit by <a href="https://transitous.org/">Transitous</a>,
           search by <a href="https://nominatim.org/">Nominatim</a>
           {autocompleteEnabled() && (
             <>

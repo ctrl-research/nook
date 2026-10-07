@@ -11,7 +11,8 @@ export const PRESET_CATEGORIES: Category[] = [
     id: "transit",
     label: "Transit stop",
     icon: "🚏",
-    tags: ["highway=bus_stop", "railway=station|halt|tram_stop", "public_transport=station"],
+    // public_transport=station mostly duplicates railway=station, so it's left out.
+    tags: ["highway=bus_stop", "railway=station|halt|tram_stop"],
   },
   { id: "school", label: "School", icon: "🏫", tags: ["amenity=school"] },
   { id: "groceries", label: "Groceries", icon: "🛒", tags: ["shop=supermarket|greengrocer"] },

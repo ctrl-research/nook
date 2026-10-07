@@ -35,9 +35,9 @@ Suggestions while typing need a free [Geoapify](https://www.geoapify.com/) API k
 ## How it works
 
 1. **Origin:** suggestions appear as you type (Geoapify, when a key is configured); **Search** (or Enter with no suggestion list open) runs a Nominatim search. Without a Geoapify key, or once it's rejected or over quota, the box falls back to submit-only search. Clicking the map deliberately does *not* move the origin, so a stray click can't shift it. Search and the map are limited to the GTA (`src/config/region.ts`).
-2. **Options per category:** Overpass is queried with every category's tag filters around the origin, widening the radius (1.5 → 5 → 15 → 30 km) only for categories with fewer than 6 matches. Those 6 are ranked by **walking time**, so a park across a highway doesn't win just for being close; the quickest walk is shown by default.
+2. **Options per category:** each category is searched on its own with Nominatim's `[key=value]` search in a box around the origin, widened (1.5 → 5 → 15 → 30 km) only until something is found. Up to 6 options from that box are ranked by **walking time**, so a park across a highway doesn't win just for being close; the quickest walk is shown by default. Rows fill in as each category finishes rather than all at once.
 3. **Choosing another option:** click a category to expand its list and show its other options on the map. Pick one (from the list or the map) to use it instead; the pick is saved in the URL. **Show 6 more** fetches the next batch. "Downtown" is a fixed point (King & Bay) rather than a search.
-4. **Travel times:** car and walk times come from OSRM table requests (one per mode for all destinations). Transit comes from Transitous at the chosen departure time (default: next weekday 08:00), counting from when you leave home, not including the wait before you set out. When walking beats transit, the walk time is shown with 🚶.
+4. **Travel times:** walk and car times come from Valhalla matrix requests. Lookups made close together are merged into one request, and each time is cached on its own. Transit comes from Transitous at the chosen departure time (default: next weekday 08:00), counting from when you leave home, not including the wait before you set out. When walking beats transit, the walk time is shown with 🚶.
 5. **Routes:** click any time to draw that route on the map; transit legs use the line's own colour.
 
 ### Services
@@ -46,16 +46,17 @@ Suggestions while typing need a free [Geoapify](https://www.geoapify.com/) API k
 | --- | --- | --- |
 | Base map | [OpenFreeMap](https://openfreemap.org/) Liberty (vector, via MapLibre GL) | No key; dashed lines and 3D buildings are hidden for a calmer map |
 | Address suggestions while typing (optional) | [Geoapify](https://www.geoapify.com/) | Free tier: 3,000 requests/day, commercial use OK; browser key restricted by origin |
-| Address search (on submit), place-search fallback | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Paced to 1 req/s |
-| Nearby places | [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Rotates between public instances |
-| Car / walk routing | [FOSSGIS OSRM](https://routing.openstreetmap.de/) | |
+| Address search (on submit) | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Paced to 1 req/s |
+| Nearby places | [Nominatim](https://nominatim.org/) `[key=value]` search | Overpass was dropped: its public servers took 10–25s or timed out |
+| Walk / car times and routes | [FOSSGIS Valhalla](https://valhalla.openstreetmap.de/) | ~0.35s per request; fair use 1 req/s per user. FOSSGIS's OSRM was dropped: it delayed every request after the first by ~10s |
 | Public transit | [Transitous](https://transitous.org/) | Coverage depends on the region's published GTFS feeds |
 
 ### Reliability
 
 These are community-run servers with no uptime guarantee. The app degrades rather than fails:
 
-- If every Overpass instance fails, place search falls back to Nominatim's `[key=value]` search (slower and less complete), and Overpass is skipped for 3 minutes rather than waiting on timeouts again.
+- Each category's search and routing is independent, so one slow or failing lookup only affects its own row.
+- The FOSSGIS servers (Nominatim, Valhalla) are offered for fair, non-production use. Nook keeps well within their limits (paced requests, batching, caching), but a busy public deployment should move to a self-hosted or paid provider.
 - Each service lives behind its own module in `src/api/`, so moving one to a self-hosted or paid provider (Google, Mapbox, Geoapify…) touches a single file.
 - Responses are cached in the browser (Cache Storage) so reloading or revisiting a setup doesn't re-query everything: places and walk/car times for 7 days, address lookups for 30 days, transit for 12 hours. Errors are never stored, expired entries are pruned on load, and the footer has a **Clear cached data** link. This is a per-browser cache of public data, not app state: the setup itself still lives only in the URL.
 
@@ -67,7 +68,8 @@ Under **Custom category**, give a name, an emoji and comma-separated [OSM tags](
 
 - `key=value`, e.g. `amenity=library`
 - `key=a|b` (any of), e.g. `shop=supermarket|greengrocer`
-- `key` (any value), e.g. `craft`
+
+A bare `key` (any value) isn't supported: the place search needs a value.
 
 Presets live in `src/config/categories.ts`.
 

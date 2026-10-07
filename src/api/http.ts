@@ -55,7 +55,7 @@ interface FetchJsonOptions<T> extends Omit<RequestInit, "cache" | "signal"> {
   /** Keep successful responses in the browser for this long (survives reloads). */
   persistMs?: number;
   /**
-   * Treat a 200 response as a failure (e.g. Overpass reporting a server-side
+   * Treat a 200 response as a failure (e.g. a service reporting a server-side
    * error in the body) so it is neither returned nor cached.
    */
   accept?: (data: T) => boolean;
@@ -109,6 +109,24 @@ export function fetchJson<T>(url: string, opts: FetchJsonOptions<T> = {}): Promi
 export async function clearResponseCache(): Promise<void> {
   cache.clear();
   await clearCached();
+}
+
+/** Caps how many tasks run at once across independent callers. */
+export class Limiter {
+  private active = 0;
+  private queue: (() => void)[] = [];
+  constructor(private readonly max: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.max) await new Promise<void>((r) => this.queue.push(r));
+    this.active++;
+    try {
+      return await task();
+    } finally {
+      this.active--;
+      this.queue.shift()?.();
+    }
+  }
 }
 
 /** Runs `fn` over `items` with at most `limit` in flight. */
